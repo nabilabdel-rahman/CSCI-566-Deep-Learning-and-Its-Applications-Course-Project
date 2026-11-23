@@ -1,9 +1,9 @@
 #!/bin/bash
 # Usage (from the repo root):
-#   sbatch --array=0-2 carc/train.slurm configs/phase1_baseline.yaml [extra.overrides=...]
-# The array index is used as the random seed.
+#   sbatch --account=<project_id> --array=0-2 carc/train.slurm configs/phase1_baseline.yaml [extra.overrides=...]
+# The array index is used as the random seed. The account is passed on the command line
+# (see `myaccount`) so project IDs stay out of this public repo.
 
-#SBATCH --account=REPLACE_WITH_PROJECT_ID
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
