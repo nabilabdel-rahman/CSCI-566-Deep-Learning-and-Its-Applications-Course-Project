@@ -1,0 +1,29 @@
+# Phase 1 baseline: plain ERM on Camelyon17-WILDS, matching the official WILDS
+# DenseNet-121 setup so results are comparable to the leaderboard (~70% OOD test acc).
+experiment_name: phase1_erm_densenet121
+seed: 0
+output_dir: outputs
+
+data:
+  root_dir: data
+  download: true
+  frac: 1.0          # fraction of every split to use; set to e.g. 0.02 for quick debugging
+  num_workers: 4
+
+model:
+  arch: densenet121  # densenet121 | resnet18 | resnet50
+  pretrained: false  # official WILDS baseline trains from scratch
+
+train:
+  algorithm: erm
+  augment: none      # none | flip
+  epochs: 5
+  batch_size: 32
+  optimizer: sgd
+  lr: 0.001
+  momentum: 0.9
+  weight_decay: 0.01
+
+eval:
+  batch_size: 256
+  select_on: val     # split used to pick the best checkpoint; "val" is the OOD hospital (1)
