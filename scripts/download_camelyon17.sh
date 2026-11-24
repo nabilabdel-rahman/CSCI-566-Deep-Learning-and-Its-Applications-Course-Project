@@ -14,7 +14,9 @@ if [ -f "$DEST/RELEASE_v1.0.txt" ]; then
   exit 0
 fi
 
-curl -L --fail --retry 5 -C - -o "$ARCHIVE" "$URL"
+CURL=curl
+[ -x /usr/bin/curl ] && CURL=/usr/bin/curl  # conda's curl on CARC can lack HTTPS support
+$CURL -L --fail --retry 5 -C - -o "$ARCHIVE" "$URL"
 echo "Extracting..."
 tar -xzf "$ARCHIVE" -C "$DEST"
 rm "$ARCHIVE"

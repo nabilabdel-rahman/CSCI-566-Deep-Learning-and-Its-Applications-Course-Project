@@ -21,6 +21,7 @@ shift
 SEED="${SLURM_ARRAY_TASK_ID:-0}"
 
 module purge
+module load conda
 eval "$(conda shell.bash hook)"
 conda activate csci566
 
