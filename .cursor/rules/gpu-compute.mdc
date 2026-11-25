@@ -1,0 +1,26 @@
+---
+description: Heavy compute runs on the user's rented GPU, not locally by the agent
+alwaysApply: true
+---
+
+# Running heavy jobs on a rented GPU
+
+The user rents a Linux GPU machine for heavy compute. Do not launch long or GPU-heavy
+jobs locally (full training runs, multi-seed sweeps, large evaluations). Instead, tell
+the user the job is ready and give them the exact commands to run on the rented GPU;
+they will run it and paste back the output.
+
+- Fine to run locally: unit/smoke tests, `data.frac=0.02 train.epochs=1` debug runs, quick scripts (< ~5 min).
+- Everything else: hand off to the rented GPU.
+
+When handing off, always provide:
+1. Whether to `git pull` first (push the changes before handing off).
+2. The exact command, e.g. `bash scripts/run_seeds.sh configs/phase1_baseline.yaml`
+   (run inside `tmux`; `PARALLEL=1` runs seeds concurrently on one GPU).
+3. Estimated runtime and what to paste back: `tail` of `logs/<config>_seed<N>.log` and
+   `outputs/<experiment>/seed<N>/metrics.json`.
+
+Conventions:
+- One-time machine setup: `bash scripts/setup_gpu.sh` (dataset into `data/`, override with `DATA_ROOT`).
+- Runs resume from `outputs/<experiment>/seed<N>/last.pt`; delete that folder to start a run fresh.
+- The repo is public: never commit API keys, SSH keys, tokens, emails, or personal paths.

@@ -23,6 +23,7 @@ train:
   lr: 0.001
   momentum: 0.9
   weight_decay: 0.01
+  amp: true          # mixed precision; only takes effect on CUDA GPUs
 
 eval:
   batch_size: 256

@@ -5,16 +5,23 @@ from tqdm import tqdm
 from .metrics import compute_metrics
 
 
-def train_one_epoch(model, algorithm, loader, optimizer, device, desc="train"):
+def autocast(device, enabled):
+    return torch.autocast(device_type=device.type, dtype=torch.float16, enabled=enabled)
+
+
+def train_one_epoch(model, algorithm, loader, optimizer, device, scaler, amp=False, desc="train"):
     model.train()
     total, n = 0.0, 0
     bar = tqdm(loader, desc=desc, leave=False)
     for x, y, metadata in bar:
-        x, y = x.to(device), y.to(device)
-        loss = algorithm.loss(model, x, y, metadata.to(device))
+        x = x.to(device, non_blocking=True)
+        y = y.to(device, non_blocking=True)
+        with autocast(device, amp):
+            loss = algorithm.loss(model, x, y, metadata.to(device))
         optimizer.zero_grad(set_to_none=True)
-        loss.backward()
-        optimizer.step()
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
         total += loss.item() * len(y)
         n += len(y)
         bar.set_postfix(loss=f"{total / n:.4f}")
@@ -22,11 +29,13 @@ def train_one_epoch(model, algorithm, loader, optimizer, device, desc="train"):
 
 
 @torch.no_grad()
-def predict(model, loader, device, hospital_col, desc="eval"):
+def predict(model, loader, device, hospital_col, amp=False, desc="eval"):
     model.eval()
     probs, ys, hospitals = [], [], []
     for x, y, metadata in tqdm(loader, desc=desc, leave=False):
-        probs.append(torch.softmax(model(x.to(device)), dim=1).cpu())
+        with autocast(device, amp):
+            logits = model(x.to(device, non_blocking=True))
+        probs.append(torch.softmax(logits.float(), dim=1).cpu())
         ys.append(y)
         hospitals.append(metadata[:, hospital_col])
     return (
@@ -36,8 +45,8 @@ def predict(model, loader, device, hospital_col, desc="eval"):
     )
 
 
-def evaluate(model, loader, device, hospital_col, desc="eval"):
-    probs, y, hospitals = predict(model, loader, device, hospital_col, desc)
+def evaluate(model, loader, device, hospital_col, amp=False, desc="eval"):
+    probs, y, hospitals = predict(model, loader, device, hospital_col, amp, desc)
     return compute_metrics(probs, y, hospitals), (probs, y, hospitals)
 
 

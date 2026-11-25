@@ -40,6 +40,7 @@ def main():
         cfg["seed"] = args.seed
     set_seed(cfg["seed"])
     device = get_device()
+    torch.backends.cudnn.benchmark = True
 
     out_dir = os.path.join(cfg["output_dir"], cfg["experiment_name"], f"seed{cfg['seed']}")
     os.makedirs(out_dir, exist_ok=True)
@@ -55,38 +56,65 @@ def main():
     model = build_model(cfg["model"]["arch"], cfg["model"]["pretrained"]).to(device)
     algorithm = build_algorithm(cfg)
     optimizer = build_optimizer(cfg, model)
+    amp = cfg["train"]["amp"] and device.type == "cuda"
+    scaler = torch.amp.GradScaler(device.type, enabled=amp)
 
     select_on = cfg["eval"]["select_on"]
-    best_score, history = -1.0, []
+    best_score, history, start_epoch = -1.0, [], 1
     ckpt_path = os.path.join(out_dir, "best.pt")
+    last_path = os.path.join(out_dir, "last.pt")
 
-    for epoch in range(1, cfg["train"]["epochs"] + 1):
+    if os.path.exists(last_path):
+        state = torch.load(last_path, map_location=device, weights_only=False)
+        model.load_state_dict(state["model"])
+        optimizer.load_state_dict(state["optimizer"])
+        scaler.load_state_dict(state["scaler"])
+        best_score, history = state["best_score"], state["history"]
+        start_epoch = state["epoch"] + 1
+        print(f"Resuming from epoch {start_epoch} ({last_path})")
+
+    for epoch in range(start_epoch, cfg["train"]["epochs"] + 1):
         start = time.time()
-        train_loss = train_one_epoch(model, algorithm, loaders["train"], optimizer, device, desc=f"epoch {epoch}")
+        train_loss = train_one_epoch(
+            model, algorithm, loaders["train"], optimizer, device, scaler, amp, desc=f"epoch {epoch}"
+        )
         record = {"epoch": epoch, "train_loss": train_loss}
         for split in ("id_val", "val"):
-            metrics, _ = evaluate(model, loaders[split], device, hosp_col, desc=split)
+            metrics, _ = evaluate(model, loaders[split], device, hosp_col, amp, desc=split)
             record[split] = metrics
         record["minutes"] = (time.time() - start) / 60
         history.append(record)
 
         score = record[select_on]["acc"]
-        if score > best_score:
+        is_best = score > best_score
+        if is_best:
             best_score = score
             torch.save({"model": model.state_dict(), "epoch": epoch, "cfg": cfg}, ckpt_path)
+        torch.save(
+            {
+                "model": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "scaler": scaler.state_dict(),
+                "epoch": epoch,
+                "best_score": best_score,
+                "history": history,
+            },
+            last_path,
+        )
         print(
             f"epoch {epoch} | loss {train_loss:.4f} | id_val acc {record['id_val']['acc']:.4f} "
             f"| val (OOD) acc {record['val']['acc']:.4f} | {record['minutes']:.1f} min"
-            + (" | *best*" if score == best_score else "")
+            + (" | *best*" if is_best else ""),
+            flush=True,
         )
         with open(os.path.join(out_dir, "history.json"), "w") as f:
             json.dump(history, f, indent=2)
 
-    ckpt = torch.load(ckpt_path, map_location=device)
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     model.load_state_dict(ckpt["model"])
     final = {"best_epoch": ckpt["epoch"], "selected_on": select_on}
     for split in SPLITS:
-        metrics, preds = evaluate(model, loaders[split], device, hosp_col, desc=f"final {split}")
+        metrics, preds = evaluate(model, loaders[split], device, hosp_col, amp, desc=f"final {split}")
         final[split] = metrics
         save_predictions(os.path.join(out_dir, f"preds_{split}.npz"), *preds)
     with open(os.path.join(out_dir, "metrics.json"), "w") as f:
