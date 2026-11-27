@@ -20,6 +20,9 @@ def compute_metrics(probs, y, hospitals):
     metrics = {
         "n": int(len(y)),
         "acc": float((preds == y).mean()),
+        "sensitivity": float((preds[y == 1] == 1).mean()) if (y == 1).any() else float("nan"),
+        "specificity": float((preds[y == 0] == 0).mean()) if (y == 0).any() else float("nan"),
+        "pred_tumor_frac": float(preds.mean()),
         "f1_macro": float(f1_score(y, preds, average="macro")),
         "auroc": float(roc_auc_score(y, probs[:, 1])) if len(np.unique(y)) > 1 else float("nan"),
         "ece": expected_calibration_error(probs, y),

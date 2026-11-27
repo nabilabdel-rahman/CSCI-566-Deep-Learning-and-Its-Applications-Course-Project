@@ -15,12 +15,15 @@ they will run it and paste back the output.
 
 When handing off, always provide:
 1. Whether to `git pull` first (push the changes before handing off).
-2. The exact command, e.g. `bash scripts/run_seeds.sh configs/phase1_baseline.yaml`
-   (run inside `tmux`; `PARALLEL=1` runs seeds concurrently on one GPU).
-3. Estimated runtime and what to paste back: `tail` of `logs/<config>_seed<N>.log` and
-   `outputs/<experiment>/seed<N>/metrics.json`.
+2. The exact command, e.g. `SEEDS="0 1 2 3 4" MAX_PARALLEL=3 bash scripts/run_seeds.sh configs/phase2_stain.yaml`
+   (run inside `tmux`). It trains, then runs `scripts/eval_variants.sh` (last epoch + AdaBN) per seed.
+3. Estimated runtime and what to bring back: the `outputs/<experiment>/` folders (or at least the
+   `metrics.json`, `eval_*.json` and `preds_*.npz` files) and `logs/`. Then run
+   `python scripts/summarize.py` locally to rebuild `results/summary.md`.
 
 Conventions:
 - One-time machine setup: `bash scripts/setup_gpu.sh` (dataset into `data/`, override with `DATA_ROOT`).
 - Runs resume from `outputs/<experiment>/seed<N>/last.pt`; delete that folder to start a run fresh.
+- Experiment configs inherit from `configs/phase1_baseline.yaml` via `base:` and list only what changes.
+- Main metric: test (hospital 2) accuracy; always also report sensitivity, specificity, AUROC, ECE. 5 seeds per experiment.
 - The repo is public: never commit API keys, SSH keys, tokens, emails, or personal paths.

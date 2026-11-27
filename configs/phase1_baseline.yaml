@@ -16,7 +16,9 @@ model:
 
 train:
   algorithm: erm
-  augment: none      # none | flip
+  augment: []        # any of: flip, stain
+  stain_sigma: 0.1   # stain color jitter strength (used when "stain" is in augment)
+  stain_p: 0.5       # probability of jittering each training image
   epochs: 5
   batch_size: 32
   optimizer: sgd

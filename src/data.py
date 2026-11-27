@@ -3,6 +3,8 @@ from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from wilds import get_dataset
 
+from .augment import StainColorJitter
+
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
@@ -10,13 +12,24 @@ SPLITS = ("train", "id_val", "val", "test")
 HOSPITAL_FIELD = "hospital"
 
 
-def build_transform(augment, train):
+AUGMENTS = ("flip", "stain")
+
+
+def build_transform(train_cfg, train):
+    """train_cfg["augment"] is a list drawn from AUGMENTS (the legacy string "none" means [])."""
+    augment = train_cfg["augment"]
+    augment = [] if augment in (None, "none") else [augment] if isinstance(augment, str) else augment
+    unknown = set(augment) - set(AUGMENTS)
+    if unknown:
+        raise ValueError(f"Unknown augment(s): {sorted(unknown)}. Choose from {AUGMENTS}")
+
     steps = []
-    if train and augment == "flip":
+    if train and "flip" in augment:
         steps += [T.RandomHorizontalFlip(), T.RandomVerticalFlip()]
-    elif train and augment != "none":
-        raise ValueError(f"Unknown augment: {augment}")
-    steps += [T.ToTensor(), T.Normalize(IMAGENET_MEAN, IMAGENET_STD)]
+    steps.append(T.ToTensor())
+    if train and "stain" in augment:
+        steps.append(StainColorJitter(sigma=train_cfg["stain_sigma"], p=train_cfg["stain_p"]))
+    steps.append(T.Normalize(IMAGENET_MEAN, IMAGENET_STD))
     return T.Compose(steps)
 
 
@@ -38,7 +51,7 @@ def build_loaders(cfg, dataset, splits=SPLITS):
         subset = dataset.get_subset(
             split,
             frac=frac,
-            transform=build_transform(cfg["train"]["augment"], train=is_train),
+            transform=build_transform(cfg["train"], train=is_train),
         )
         loaders[split] = DataLoader(
             subset,

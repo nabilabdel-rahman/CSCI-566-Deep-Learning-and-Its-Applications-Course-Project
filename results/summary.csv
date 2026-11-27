@@ -1,0 +1,2 @@
+experiment,variant,seeds,test_acc_mean,test_acc_std,test_sensitivity_mean,test_sensitivity_std,test_specificity_mean,test_specificity_std,test_auroc_mean,test_auroc_std,test_ece_mean,test_ece_std,val_acc_mean,val_acc_std,id_val_acc_mean,id_val_acc_std
+phase1_erm_densenet121,best,"0,1,2",0.676766132888126,0.10482449913041954,0.4332463297826479,0.2501968522944578,0.9202859359936041,0.04111085853070201,0.7977887076325807,0.037717861841184946,0.21587660277197496,0.13407931228088202,0.8506379402551761,0.02604803413522715,0.8212852602304329,0.17676219520963665

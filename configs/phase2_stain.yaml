@@ -1,0 +1,7 @@
+# Phase 2, data-level fix: H&E stain color jitter (Tellez et al., 2018; Gao et al., 2023).
+# Only the augmentation differs from the baseline, so any change is attributable to it.
+base: phase1_baseline.yaml
+experiment_name: phase2_stain_densenet121
+
+train:
+  augment: [stain]

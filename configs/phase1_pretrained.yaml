@@ -1,0 +1,7 @@
+# Baseline with ImageNet-pretrained weights instead of training from scratch.
+# Reference point for Phase 2: separates "this method helped" from "any pretraining helps".
+base: phase1_baseline.yaml
+experiment_name: phase1_erm_densenet121_pretrained
+
+model:
+  pretrained: true
