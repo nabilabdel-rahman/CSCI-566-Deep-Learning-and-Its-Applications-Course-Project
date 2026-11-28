@@ -1,0 +1,10 @@
+# Phase 2, combined: ImageNet-pretrained DenseNet-121 + strong stain color jitter.
+base: phase1_baseline.yaml
+experiment_name: phase2_stain_strong_densenet121_pretrained
+
+model:
+  pretrained: true
+
+train:
+  augment: [stain]
+  stain_intensity_scale: 255.0

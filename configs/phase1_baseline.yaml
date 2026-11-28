@@ -19,6 +19,7 @@ train:
   augment: []        # any of: flip, stain
   stain_sigma: 0.1   # stain color jitter strength (used when "stain" is in augment)
   stain_p: 0.5       # probability of jittering each training image
+  stain_intensity_scale: 1.0  # 1.0 = physical optical density (weak); 255.0 = Gao et al. reference code (~4x stronger)
   epochs: 5
   batch_size: 32
   optimizer: sgd

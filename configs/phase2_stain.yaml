@@ -1,4 +1,5 @@
-# Phase 2, data-level fix: H&E stain color jitter (Tellez et al., 2018; Gao et al., 2023).
+# Phase 2, data-level fix: H&E stain color jitter (Tellez et al., 2018) on the physical
+# optical-density scale. Weaker than the Gao et al. (2023) reference; see phase2_stain_strong.yaml.
 # Only the augmentation differs from the baseline, so any change is attributable to it.
 base: phase1_baseline.yaml
 experiment_name: phase2_stain_densenet121

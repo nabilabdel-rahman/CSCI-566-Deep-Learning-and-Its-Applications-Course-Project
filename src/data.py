@@ -28,7 +28,13 @@ def build_transform(train_cfg, train):
         steps += [T.RandomHorizontalFlip(), T.RandomVerticalFlip()]
     steps.append(T.ToTensor())
     if train and "stain" in augment:
-        steps.append(StainColorJitter(sigma=train_cfg["stain_sigma"], p=train_cfg["stain_p"]))
+        steps.append(
+            StainColorJitter(
+                sigma=train_cfg["stain_sigma"],
+                p=train_cfg["stain_p"],
+                intensity_scale=train_cfg.get("stain_intensity_scale", 1.0),
+            )
+        )
     steps.append(T.Normalize(IMAGENET_MEAN, IMAGENET_STD))
     return T.Compose(steps)
 
@@ -63,6 +69,11 @@ def build_loaders(cfg, dataset, splits=SPLITS):
             drop_last=is_train,
         )
     return loaders
+
+
+def clean_subset(cfg, dataset, split):
+    """A split with the evaluation transform (no augmentation), e.g. clean training images."""
+    return dataset.get_subset(split, frac=cfg["data"]["frac"], transform=build_transform(cfg["train"], train=False))
 
 
 def hospital_column(dataset):

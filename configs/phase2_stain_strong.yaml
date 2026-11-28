@@ -1,0 +1,8 @@
+# Phase 2, data-level fix: H&E stain color jitter as implemented in the Gao et al. (2023)
+# reference code (optical density on 0-255 intensities), ~4x stronger than phase2_stain.yaml.
+base: phase1_baseline.yaml
+experiment_name: phase2_stain_strong_densenet121
+
+train:
+  augment: [stain]
+  stain_intensity_scale: 255.0

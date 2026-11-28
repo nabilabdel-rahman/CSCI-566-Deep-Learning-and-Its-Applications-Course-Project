@@ -17,22 +17,27 @@ class StainColorJitter:
 
     Operates on a (3, H, W) RGB tensor in [0, 1]. Each stain channel is scaled by
     alpha ~ U(1 - sigma, 1 + sigma) and shifted by beta ~ U(-sigma, sigma) in optical-density space.
+
+    ``intensity_scale`` sets the pixel range the optical density is computed on. 1.0 gives the
+    physical optical density; 255.0 reproduces the Gao et al. reference code, where alpha also
+    scales the log(255) offset, so the same sigma produces a ~4x larger color change.
     """
 
-    def __init__(self, sigma=0.1, p=0.5):
+    def __init__(self, sigma=0.1, p=0.5, intensity_scale=1.0):
         self.sigma = sigma
         self.p = p
+        self.intensity_scale = intensity_scale
 
     def __call__(self, x):
         if torch.rand(()) >= self.p:
             return x
-        od = -torch.log(x.clamp_min(0) + _EPS)
+        od = -torch.log(self.intensity_scale * x.clamp_min(0) + _EPS)
         stains = torch.einsum("chw,cd->dhw", od, _HED_FROM_RGB)
         alpha = 1 + (torch.rand(3) * 2 - 1) * self.sigma
         beta = (torch.rand(3) * 2 - 1) * self.sigma
         stains = stains * alpha[:, None, None] + beta[:, None, None]
-        rgb = torch.exp(-torch.einsum("dhw,dc->chw", stains, _RGB_FROM_HED)) - _EPS
+        rgb = (torch.exp(-torch.einsum("dhw,dc->chw", stains, _RGB_FROM_HED)) - _EPS) / self.intensity_scale
         return rgb.clamp(0, 1)
 
     def __repr__(self):
-        return f"{type(self).__name__}(sigma={self.sigma}, p={self.p})"
+        return f"{type(self).__name__}(sigma={self.sigma}, p={self.p}, intensity_scale={self.intensity_scale})"

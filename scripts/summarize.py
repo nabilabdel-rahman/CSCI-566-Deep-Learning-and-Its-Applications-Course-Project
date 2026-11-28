@@ -3,8 +3,10 @@
 Each experiment lives in <outputs>/<experiment>/seed<N>/. For each seed this reads:
   - preds_<split>.npz      -> "best"        (checkpoint selected on the OOD validation hospital)
   - eval_last.json         -> "last"        (final epoch)
-  - eval_best_adabn.json   -> "best+adabn"  (test-time BatchNorm adaptation)
+  - eval_best_adabn.json   -> "best+adabn"  (BatchNorm re-estimated on the target hospital; test-time adaptation)
   - eval_last_adabn.json   -> "last+adabn"
+  - eval_best_srcbn.json   -> "best+srcbn"  (BatchNorm re-estimated on clean training images; no target data)
+  - eval_last_srcbn.json   -> "last+srcbn"
 
 Usage:
     python scripts/summarize.py [--outputs outputs] [--results results]
@@ -23,7 +25,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.metrics import compute_metrics  # noqa: E402
 
 SPLITS = ("id_val", "val", "test")
-EVAL_FILES = {"last": "eval_last.json", "best+adabn": "eval_best_adabn.json", "last+adabn": "eval_last_adabn.json"}
+EVAL_FILES = {
+    "last": "eval_last.json",
+    "best+srcbn": "eval_best_srcbn.json",
+    "last+srcbn": "eval_last_srcbn.json",
+    "best+adabn": "eval_best_adabn.json",
+    "last+adabn": "eval_last_adabn.json",
+}
+VARIANT_ORDER = ["best", *EVAL_FILES]
 COLUMNS = [
     ("test", "acc"), ("test", "sensitivity"), ("test", "specificity"), ("test", "auroc"), ("test", "ece"),
     ("val", "acc"), ("id_val", "acc"),
@@ -64,7 +73,7 @@ def collect(outputs_dir):
 
 def summarize(results):
     rows = []
-    for (experiment, variant), seeds in sorted(results.items()):
+    for (experiment, variant), seeds in sorted(results.items(), key=lambda kv: (kv[0][0], VARIANT_ORDER.index(kv[0][1]))):
         row = {"experiment": experiment, "variant": variant, "seeds": ",".join(map(str, sorted(seeds)))}
         for split, metric in COLUMNS:
             values = np.array([seeds[s][split][metric] for s in sorted(seeds)], dtype=float)
